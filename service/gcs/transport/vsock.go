@@ -1,9 +1,11 @@
 package transport
 
 import (
-	"github.com/sirupsen/logrus"
+	"fmt"
+	"time"
+
 	"github.com/linuxkit/virtsock/pkg/vsock"
-	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -22,11 +24,14 @@ var _ Transport = &VsockTransport{}
 func (t *VsockTransport) Dial(port uint32) (Connection, error) {
 	logrus.Infof("vsock Dial port (%d)", port)
 
-	conn, err := vsock.Dial(vmaddrCidHost, port)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed connecting the VsockConnection")
+	for i := 0; i < 10; i++ {
+		conn, err := vsock.Dial(vmaddrCidHost, port)
+		if err != nil {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		logrus.Infof("vsock Connect port (%d)", port)
+		return conn, nil
 	}
-	logrus.Infof("vsock Connect port (%d)", port)
-
-	return conn, nil
+	return nil, fmt.Errorf("failed connecting the VsockConnection")
 }
